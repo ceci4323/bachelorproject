@@ -1,0 +1,107 @@
+#This program makes mature sequences out of fasta-files by cleaving off the first part of the protein (Signal Peptide) and leaves the mature protein containing the transit peptide and the rest of the protein.
+#This program takes 2 types of files as input:
+# 1) .faa:    Fasta-files containing the whole sequence of the protein
+# 2) .output: Files containing output information from the SignalP3.0-program in HMM, NN or both-mode.
+
+import glob
+
+def get_sequence(data_file, output_file, seq_id, pos):
+    data_sequence = ''
+    id_found = False
+    for line in data_file:
+        if line:
+            if line.startswith('>' + seq_id):
+                id_found = True
+            else:
+                if id_found:
+                    if line.startswith('>'):
+                        output_file.write(seq_id + '\t' + data_sequence[int(pos):] + '\n')
+                        data_file.seek(0)
+                        break
+                    else:
+                        data_sequence += line.rstrip()
+    return
+
+
+def process_markov_models_hmm(name, input_file, data_file):
+    signalpeptid_file = open(name + '.hmm_results.txt', 'w+')
+    id_seq = ''
+    id_tag = 'Prediction: Signal peptide'
+    element_found = False
+    for line in input_file:
+        if line:
+            if line.startswith('>'):
+                seq_id = line.split()[0]
+                seq_id = seq_id[1:]
+            elif line.startswith(id_tag):
+                element_found = True
+            elif element_found:
+                if line.startswith('Max cleavage site'):
+                    pos = line.split()[7]
+                    get_sequence(data_file, signalpeptid_file, seq_id, pos)
+                    element_found = False
+    signalpeptid_file.close()
+    return
+
+
+def process_neural_networks_nn(name, input_file, data_file):
+    neural_networks_file = open(name + 'nn_results.txt', 'w+')
+    id_seq = ''
+    id_tag = '  max. S'
+    element_found = False
+    for line in input_file:
+        if line:
+            if line.startswith('>'):
+                seq_id = line.split()[0]
+                seq_id = seq_id[1:]
+            elif line.startswith(id_tag):
+                if line.split()[5] == 'YES':
+                    element_found = True
+            elif element_found:
+                if line.startswith('# Most likely cleavage site '):
+                    pos = line.split()[7]
+                    get_sequence(data_file, neural_networks_file, seq_id, pos)
+                    element_found = False
+    neural_networks_file.close()
+    return
+
+
+def process_signalp_nn(name, input_file, data_file):
+    seq_id = ''
+    cleavage_site_file = open(name + '.both_results.txt', 'w+')
+    for line in input_file:
+        if line:
+            if not line.startswith('# name'):
+                if line.split()[3] == 'Y':
+                    seq_id = line.split()[0]
+                    pos = line.split()[2]
+                    if pos.isdigit():
+                        get_sequence(data_file, cleavage_site_file, seq_id, pos)
+    cleavage_site_file.close()
+    return
+
+
+def parse_output_file(name):
+    data_file = open(name, 'r')
+    input_file = open(name + '.signalp3.short.output', 'r')
+    for line in input_file:
+        if line:
+            if line.startswith('# SignalP-NN euk predictions '):
+                process_signalp_nn(name, input_file, data_file)
+                break
+            elif line.startswith('Using neural networks (NN)'):
+                process_neural_networks_nn(name, input_file, data_file)
+                break
+            elif line.startswith('Using hidden Markov models (HMM)'):
+                process_markov_models_hmm(name, input_file, data_file)
+                break
+    input_file.close()
+    data_file.close()
+    return
+
+
+file_names = glob.glob('*.faa')
+for name in file_names:
+    parse_output_file(name)
+
+
