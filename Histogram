@@ -1,0 +1,35 @@
+#### Make histogram ###
+"This program takes the files creates by TPLextraction as input and makes a list of the frequences of each length of the TPLs. "
+"This list is then printed into the file total_sequence.txt, which is then imported into Excel to make histograms"
+
+import glob
+from collections import Counter
+
+output_file = open('total_sequence.txt', 'w+')
+values = {}
+
+def process_file(name):
+    seq_id = ''
+    data = ''
+    input_file = open(name)
+    for line in input_file:
+        if line:
+            seq_id = line.split()[0]
+            sequence = line.split()[1]
+            values[seq_id] = len(sequence)
+    return
+
+
+file_name = glob.glob('*.faa.res')
+for name in file_name:
+    process_file(name)
+    file_name.close()
+
+res = Counter(values.values())
+
+s = [(k, res[k]) for k in sorted(res, key=res.get, reverse=True)]
+
+for item in s:
+    output_file.write(str(item[0]) + '\t' + str(item[1]) + '\n')
+output_file.close()
+
