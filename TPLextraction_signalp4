@@ -1,0 +1,102 @@
+# TPLextraction-program
+"This program takes in three types of files (TargetP 1.0-file, SignalP 4.1-file and fasta-file) and extracts the sequence of the TPL which is then printed in the result .res-file"
+
+import glob
+
+TPL_index_file = '' # *.txt file
+block_size_file = '' # *.out file
+sequence_file = '' #.faa file
+result_file = ''
+
+
+def open_files(name):
+    #we open files according to the filename.
+    global sequence_file
+    sequence_file = open(name, 'r')
+    global block_size_file
+    block_size_file = open(name + '.signalp.out', 'r')
+    global TPL_index_file
+    TPL_index_file = open(name + '.signalp.mature.fasta.targetp.out', 'r')
+    global result_file
+    result_file = open(name + '.res', 'w+')
+    return
+
+
+def read_block_data(name, pos, block_size):
+    #find the right sequence name in file then read all data in the section and copy the data and write in file
+    found = False
+    section_id = '>' + name
+    section_data = ''
+    full_data_block = False
+    for line in sequence_file:
+        if line:
+            if line.startswith('>') and found == True:
+                full_data_block = True
+                found = False
+            if found:
+                section_data += line.rstrip()
+            text = line[:len(section_id)]
+            if text == section_id:
+                found = True
+            if full_data_block:
+                frm = int(pos) - 1
+                to = int(pos) + int(block_size)
+                data = section_data[frm: to ]
+                result_file.write('>' + name + '\n' + data + '\n')
+                sequence_file.seek(0)
+                break
+    return
+
+
+def read_block_size(section_name, pos):
+    #read the block size based on number in file and get the name of sequence as well. Then call function to get and write data
+    found = False
+    tag_name = "# name"
+    for line in block_size_file:
+        if line:
+            if found:
+                s_name = line.split()[0]
+                if line.split()[9] == 'Y' and s_name == section_name:
+                    block_size = line.split()[2]
+                    if block_size.isdigit():
+                        read_block_data(section_name, pos, block_size )
+                        block_size_file.seek(0)
+                    break
+            else:
+                text = line[:len(tag_name)]
+                if text == tag_name:
+                    found = True
+    return
+
+
+def read_positions():
+    # read all entries one by one. For each we call function to get block size read from another file
+    found = False
+    for line in TPL_index_file:
+        if line:
+            if found:
+                if not line[:6] == "------" and not line[:6] == "cutoff":
+                    if line.split()[6] == 'C' or line.split()[6] == 'M':
+                        pos = line.split()[8]
+                        if pos.isdigit():
+                            section_name = line.split()[0]
+                            read_block_size(section_name, pos)
+            else:
+                text = line[:6]
+                if text == "------":
+                    if found:
+                        found = False
+                    else:
+                        found = True
+    sequence_file.close()
+    block_size_file.close()
+    TPL_index_file.close()
+    return
+
+
+file_names = glob.glob('*.faa')
+for name in file_names:
+    open_files(name)
+    read_positions()
+result_file.close()
+
