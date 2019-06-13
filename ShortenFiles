@@ -1,0 +1,62 @@
+# ShortenFiles-program
+"This program takes a fasta-file with multiple lines and cuts the file into smaller files containing a maximum of 2000 sequences in each"
+
+import multiprocessing
+import glob
+import os
+
+# Intialization:
+line_length = 60
+max_entries = 2000
+
+# Function called for every file found in directory. Filename is passed as an argument
+def write_files(filename):
+
+    # Intialization
+    file_count = 1
+    header_flag = True
+    entry_count = 0
+    outfile = open(str(file_count) + '_' + str(filename), 'w')
+    section = ''
+    header_section = ''
+    with open(filename) as infile:
+        for line in infile:
+            line = line.rstrip()
+
+            # start counting the number of lines
+            if line:
+                if line.startswith('>'):
+                    entry_count += 1
+                    if not header_flag:
+                        outfile.write(header_section + '\n')
+
+                        for i in range(0, len(section), line_length):
+                            outfile.write(section[i:i + line_length])
+                    section = ''
+                    header_flag = True
+                    header_section = line
+                else:
+                    header_flag = False
+                    section += line + '\n'
+
+                if entry_count == max_entries:
+                    file_count += 1
+                    entry_count = 0
+                    outfile.close()
+                    outfile = open(str(file_count) + '_' + str(filename), 'w')
+            else:
+                #we have reach end of file and will close the output file
+                outfile.close()
+
+    return
+
+# Tunning the program
+# This part of the program is taken from the website https://docs.python.org/3.2/library/multiprocessing.html
+# in order to perform multiprocessing on my files.
+
+# This line is nesscesary for the multiprocessing to run on windows.
+if __name__ == '__main__':
+    filenames = glob.glob('*.faa')
+    for i in filenames:
+        p = multiprocessing.Process(target=write_files, args=(i,))
+        p.start()
