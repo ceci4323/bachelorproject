@@ -1,0 +1,40 @@
+#         Calculate Netcharge
+"This program takes each of the files created by the program TPLextraction and calculates the netcharge of the TPL-sequences"
+
+import glob
+
+net_charge_positive = open("net_charge_positive.txt", 'w+')
+net_charge_negative = open("net_charge_negative.txt", 'w+')
+net_charge_neutral = open("net_charge_neutral.txt", 'w+')
+
+
+def process_file(file):
+    for line in file:
+        if line:
+            count = 0
+            sequence_id = line.rstrip().split()[0]
+            amino_acid_string= line.rstrip().split()[1]
+            count = amino_acid_string.count('R')
+            count += amino_acid_string.count('H')
+            count += amino_acid_string.count('K')
+            count -= amino_acid_string.count('D')
+            count -= amino_acid_string.count('E')
+            if count > 0:
+                net_charge_positive.write(sequence_id + '\n')
+            if count < 0:
+                net_charge_negative.writelines(sequence_id + '\n')
+            if count == 0:
+                net_charge_neutral.writelines(sequence_id + '\n')
+    return
+
+
+file_names = glob.glob('*.res')
+
+for name in file_names:
+    file = open(name, 'r')
+    process_file(file)
+    file.close()
+
+net_charge_positive.close()
+net_charge_negative.close()
+net_charge_neutral.close()
