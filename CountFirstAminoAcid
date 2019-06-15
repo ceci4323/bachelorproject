@@ -1,0 +1,29 @@
+# CountFirstAminoAcid
+"This program takes in a fasta-file consisting of only the TPL-sequences created by the TPLextraction-program. "
+"It counts how many of the sequences starts with an aromatic amino acid or leucine and prints the result in an output-file pos_one_test.txt"
+
+
+import glob
+
+output = open('pos_one_test.txt', 'w+')
+def process_file(name):
+    input = open(name)
+    for line in input:
+        if line:
+            if line.startswith('>'):
+               seq_id = line[1:].rstrip()
+            else:
+                if line.startswith('F') or line.startswith('W') or line.startswith('Y') or line.startswith('H') or line.startswith('F') or line.startswith('L'):
+                    output.write(seq_id + '\n')
+    input.close()
+    return
+
+
+
+
+names = glob.glob('*.res')
+for name in names:
+    print('Working on file : ' + name + '\n')
+    process_file(name)
+
+output.close()
