@@ -1,0 +1,117 @@
+# IdentifySolTrans.py
+"This program takes several files with protein sequences as input and calculates how many of the protein ID's that are present in both TOPCONS-single and the TMHMM-output file"
+
+tmhmm_input_file = open('result_file_tmhmm.res', 'r')
+topcons_input_file = open('result_file_topcons.res', 'r')
+soluble_topcons_file = open('result_soluable.res', 'r')
+transpotein_result_file_both = open('TRANSproteinsBOTH.txt', 'w+')
+transpotein_result_file_tmhmm = open('TRANSproteinsTMHMM.txt', 'w+')
+transpotein_result_file_topcons = open('TRANSproteinsTOPCONS.txt', 'w+')
+transpotein_result_file_summary = open('TRANSproteins_Summary.txt', 'w+')
+soluble_proteins_BOTH = open('soluble_proteins_BOTH.txt', 'w+')
+only_topcon = open('Only_topcon.txt', 'w+')
+only_tmhmm = open('Only_tmhmm.txt', 'w+')
+both = open('both.txt', 'w+')
+
+def parse_file():
+    tmhmm_trans_list = set()
+    topcons_list = set()
+    solveable_tmhmm = set()
+    number_of_proteins = 0
+    only_tmhmm_list = set()
+    both_list = set()
+    only_topcon_list = set()
+    both_soluble_list = set()
+    topcons_soluble = set()
+
+    for line in tmhmm_input_file:
+        if line:
+            if not line.startswith('SEQ_ID'):
+                number_of_proteins +=1
+                seq_id = line.split()[0]
+                if int(line.split()[1]) > 0:
+                    tmhmm_trans_list.add(seq_id) #list of transmembrane in TMHMM
+                else:
+                    solveable_tmhmm.add(seq_id) #list of soluble in TMHMM
+
+    for line in topcons_input_file:
+        if line:
+            if not line.startswith('SEQ_ID'):
+                number_of_proteins +=1
+                seq_id = line.split()[0]
+                topcons_list.add(seq_id) #list of transmembrane in TOPCONs
+
+    for line in soluble_topcons_file:
+        if line:
+            seq_id = line.split()[0]
+            topcons_soluble.add(seq_id)
+
+    for line in tmhmm_trans_list:
+        seq_id = line.split()[0]
+        if line[0] not in topcons_list:
+            only_tmhmm_list.add(seq_id)
+        if line in topcons_list:
+            both_list.add(seq_id)
+
+    for line in topcons_list:
+        seq_id = line.split()[0]
+        if line[0] not in tmhmm_trans_list:
+            only_topcon_list.add(seq_id)
+
+    for line in solveable_tmhmm:
+        seq_id = line.split()[0]
+        if seq_id in topcons_soluble:
+            both_soluble_list.add(seq_id)
+
+
+    for item in only_topcon_list:
+        only_topcon.write(item + '\n')
+
+    for item in only_tmhmm_list:
+        only_tmhmm.write(item + '\n')
+
+    for item in both_list:
+        both.write(item + '\n')
+
+    print('only in topcon:' + str(len(only_topcon_list)))
+    print('only in tmhmm' + str(len(only_tmhmm_list)))
+    print('both' + str(len(both_list)))
+    print('both soluble:' + str(len(both_soluble_list)))
+
+
+    intersection_list = tmhmm_trans_list.intersection(topcons_list) #all trans identified in both
+
+    count_intersection = len(intersection_list) #number of trans in both
+    count_tmhmm = len(tmhmm_trans_list.difference(topcons_list)) #trans in ONLY tmhmm
+    count_topcons = len(topcons_list.difference(tmhmm_trans_list)) #trans in ONLY topcons
+
+    transpotein_result_file_summary.write('Number of proteins                                     : ' + str(number_of_proteins) + '\n')
+    transpotein_result_file_summary.write('Number of identified transmembrane proteins in TOPCONS : ' + str(count_topcons) + '\n')
+    transpotein_result_file_summary.write('Number of identified transmembrane proteins in TMHMM   : ' + str(count_tmhmm) + '\n')
+    transpotein_result_file_summary.write('Number of identified transmembrane proteins in BOTH    : ' + str(count_intersection) + '\n')
+    transpotein_result_file_summary.write('Number of solveable proteins in TMHMM                  : ' + str(len(solveable_tmhmm)) + '\n')
+
+    for item in intersection_list:
+        transpotein_result_file_both.write(item + '\n')
+
+    difference_list = tmhmm_trans_list.difference(topcons_list)
+    for item in difference_list:
+        transpotein_result_file_tmhmm.write(item + '\n')
+
+    difference_list = topcons_list.difference(tmhmm_trans_list)
+    for item in difference_list:
+        transpotein_result_file_topcons.write(item + '\n')
+
+    return
+
+parse_file()
+tmhmm_input_file.close()
+topcons_input_file.close()
+
+transpotein_result_file_both.close()
+transpotein_result_file_tmhmm.close()
+transpotein_result_file_topcons.close()
+transpotein_result_file_summary.close()
+only_tmhmm.close()
+only_topcon.close()
+both.close()
