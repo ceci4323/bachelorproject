@@ -1,0 +1,59 @@
+# AttentionProfile
+"This program takes in an attention-file (.txt) created in DeepLoc and calculates the mean score for the first 500 positions in the amino acid sequence and prints it to a list."
+"The program also collects the lowest and highest values obtained at each score and prints them"
+
+import glob
+import statistics
+
+
+end_number = 500
+number = [0] * end_number
+
+num_of_col = 3
+numbers = [[0] * num_of_col for i in range(end_number)]
+
+col_index = 0
+
+def process_file(name):
+    add_number = 0
+    tag_found = False
+    id_tag = "# AA"
+    index = 0
+    input_file = open(name, 'r')
+    for line in input_file:
+        if line.startswith(id_tag):
+            tag_found = True
+        elif tag_found:
+            number[index] += float(line.split()[2])
+            numbers[index] [col_index] = float(line.split()[2])
+            index += 1
+        if index == end_number -1:
+            break
+    input_file.close()
+    return
+
+
+output = open("variance.txt", 'w+')
+file_name = glob.glob('*.txt')
+file_count = 0
+for name in file_name:
+    file_count += 1
+    process_file(name)
+    col_index += 1
+
+for i in range(len(number)):
+    number[i] = number[i] / file_count
+    variance = statistics.pvariance(number)
+output.write("Variance of sample = " + str(variance) + '\n\n\n')
+output.close()
+
+output = open("mean.txt", 'w+')
+pos = 1
+for val in enumerate(numbers):
+    list = val[1]
+    mean = statistics.mean(list)
+    vmax = max(list)
+    vmin = min(list)
+    output.write(str(round(mean, 8))+ "\t" + str(vmax) + "\t" + str(vmin) + "\n")
+    pos += 1
+output.close()
