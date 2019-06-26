@@ -1,0 +1,124 @@
+#This program takes in the output files created by the program TPLextraction and counts how many of the protein IDs that have been found to be putative across all the different combinations of the program.
+
+
+
+sp3_file = open('total_ID_sp3.txt', 'r')
+sp4_file = open('total_ID_sp4.txt', 'r')
+sp5_file = open('total_ID_sp5.txt', 'r')
+
+#output files
+
+all_file = open('all_tpls.txt', 'w+')
+sp3_sp4_file = open('sp3_sp4_tpls.txt', 'w+')
+sp3_sp5_file = open('sp3_sp5_tpls.txt', 'w+')
+sp4_sp5_file = open('sp3_sp4_tpls.txt', 'w+')
+
+only_sp3_file = open('only_sp3.txt', 'w+')
+only_sp4_file = open('only_sp4.txt', 'w+')
+only_sp5_file = open('only_sp5.txt', 'w+')
+
+def parse_file():
+
+    sp3 = set()
+    sp4 = set()
+    sp5 = set()
+
+    all = set()
+    sp3_sp4 = set()
+    sp3_sp5 = set()
+    sp4_sp5 = set()
+
+    only_sp3 = set()
+    only_sp4 = set()
+    only_sp5 = set()
+
+    ####
+    #loading of files
+
+    for line in sp3_file:
+        if line:
+            if not line.startswith('SEQ_ID'):
+                seq_id = line.split()[0]
+                sp3.add(seq_id)
+
+    for line in sp4_file:
+        if line:
+            if not line.startswith('SEQ_ID'):
+                seq_id = line.split()[0]
+                sp4.add(seq_id)
+
+    for line in sp5_file:
+        if line:
+            if not line.startswith('SEQ_ID'):
+                seq_id = line.split()[0]
+                sp5.add(seq_id)
+
+    #testing if it is there
+
+    #sp3
+    for line in sp3:
+        seq_id = line.split()[0]
+        if seq_id in sp4 and seq_id in sp5:
+            all.add(seq_id)
+
+        elif seq_id in sp4 and seq_id not in sp5:
+            sp3_sp4.add(seq_id)
+
+        elif seq_id not in sp4 and seq_id in sp5:
+            sp3_sp5.add(seq_id)
+
+        elif seq_id not in sp4 and seq_id not in sp5:
+            only_sp3.add(seq_id)
+
+    # sp4
+    for line in sp4:
+        seq_id = line.split()[0]
+        if seq_id in sp5:
+            sp4_sp5.add(seq_id)
+
+        elif seq_id not in sp5:
+            only_sp4.add(seq_id)
+
+    # sp5
+    for line in sp5:
+        seq_id = line.split()[0]
+        if seq_id not in sp4:
+            only_sp5.add(seq_id)
+
+    #printing results
+    #all
+    for item in all:
+        all_file.write(item + '\n')
+
+    #sp3/sp4/sp5 in common
+    for item in sp3_sp4:
+        sp3_sp4_file.write(item + '\n')
+
+    for item in sp3_sp5:
+        sp3_sp5_file.write(item + '\n')
+
+    for item in sp4_sp5:
+        sp4_sp5_file.write(item + '\n')
+
+    #only-files
+    for item in only_sp3:
+        only_sp3_file.write(item + '\n')
+
+    for item in only_sp4:
+        only_sp4_file.write(item + '\n')
+
+    for item in only_sp5:
+        only_sp5_file.write(item + '\n')
+
+    print('all:    ' + str(len(all)))
+    print('sp3+sp4:  ' + str(len(sp3_sp4)))
+    print('sp3+sp5:    ' + str(len(sp3_sp5)))
+    print('sp4+sp5:  ' + str(len(sp4_sp5)))
+
+    print('only sp3:  ' + str(len(only_sp3)))
+    print('only sp4: ' + str(len(only_sp4)))
+    print('only sp5:  ' + str(len(only_sp5)))
+
+    return
+
+parse_file()
