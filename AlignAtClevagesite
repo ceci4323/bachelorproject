@@ -1,3 +1,118 @@
 #This file contains the program written to align the sequences for the Seq2Logo-website
-#This program takes a file with exactly 200 characters or less (aminoacids or dashes (-))
+#This program takes a file with exactly 200 characters or less (aminoacids or dashes (-)) and aligns the sequences in the files at the cleavage site, 
+# either in the output-files from SignalP 4.1 (.out) or TargetP 1.0 (.targetp.out).
 
+import glob
+
+def repstr(length):
+    return ('-'* length)[0:length]
+
+seq_id_directory = {}
+
+def calc_max_pos_signalp(name):
+    tag_found = False
+    tag_id = '-----------'
+    max_pos = 0
+    input_file = open(name, 'r')
+    for line in input_file:
+        if line:
+            if line.startswith(tag_id):
+                if tag_found:
+                    tag_found = False
+                else:
+                    tag_found = True
+            elif tag_found:
+                if line.split()[6] == 'M' or line.split()[6] == 'C':
+                    pos = line.split()[8]
+                    seq_id_directory[line.split()[0]] = pos
+                    if int(max_pos) < int(pos):
+                        max_pos = (pos)
+    input_file.close()
+    return max_pos
+
+
+def calc_max_pos_out(name):
+    tag_found = False
+    tag_id = '# name'
+    max_pos = 0
+    input_file = open(name, 'r')
+    for line in input_file:
+        if line:
+            if line.startswith(tag_id):
+                tag_found = True
+            elif tag_found and line.split()[9] == 'Y':
+                pos = line.split()[2]
+                seq_id_directory[line.split()[0]] = pos
+                if int(max_pos) < int(pos):
+                    max_pos = (pos)
+    input_file.close()
+    return max_pos
+
+def read_fasta_file(name):
+    name = name.split('.')
+    file_name = name[0] + '.' + name[1] + '.faa.signalp.mature.fasta'
+    input_file = open(file_name)
+    fasta_list = {}
+
+    section_data = ''
+    section_found = False
+    seq_id = ''
+
+    for line in input_file:
+        if line:
+            if line.startswith('>'):
+                if section_found:
+                    fasta_list[seq_id] = section_data[:200]
+                    section_data = ''
+                    section_found = False
+                    seq_id = line.split()[0]
+                    seq_id = seq_id[1:]
+                else:
+                    seq_id = line.split()[0]
+                    seq_id = seq_id[1:]
+            else:
+                section_data += line.rstrip()
+                section_found = True
+    input_file.close()
+    return fasta_list
+
+
+def process_files(name, max_pos):
+    output_file = open(name + '_aligned.res', 'w+')
+
+    fasta_list = read_fasta_file(name)
+    result_list =  {x:seq_id_directory[x] for x in seq_id_directory if x in fasta_list}
+
+    for key, value in result_list.items():
+        diff = int(max_pos) - int(value)
+        if int(value) < int(max_pos):
+            padding = repstr(diff)
+            new_line = padding + fasta_list[key]
+        elif int(value) > int(max_pos):
+            padding = repstr(diff)
+            new_line = fasta_list[key] + padding
+        elif int(value) == int(max_pos):
+            new_line = fasta_list[key]
+        output_file.write(new_line + '\n')
+        new_line = ''
+    output_file.close()
+    return
+
+max_file_output = open('max_file_list.txt', 'w+')
+
+file_names = glob.glob('*.signalp.mature.fasta.targetp.out')
+for name in file_names:
+    print('Processing file : ' + name + '\n')
+    max_pos = calc_max_pos_signalp(name)
+    max_file_output.write(name + ' ' + str(max_pos) + '\n')
+    process_files(name, max_pos)
+    seq_id_directory.clear()
+
+file_names = glob.glob('*.signalp.out')
+for name in file_names:
+    print('Processing file : ' + name + '\n')
+    max_pos = calc_max_pos_out(name)
+    max_file_output.write(name + ' ' + str(max_pos) + '\n')
+    process_files(name, max_pos)
+
+max_file_output.close()
