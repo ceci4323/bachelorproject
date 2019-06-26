@@ -1,1 +1,132 @@
+#This file contains the program written to align the sequences for the Seq2Logo-website
+#This program takes a file with exactly 200 characters or less (aminoacids or dashes (-)) and aligns the sequences in the files at the cleavage site, 
+# either in the output-files from SignalP 4.1 (.out) or TargetP 2.0 (.targetp.out)
 
+import glob
+
+def repstr(length):
+    return ('-'* length)[0:length]
+
+
+seq_id_directory = {}
+
+
+def calc_max_pos_signalp5(name):
+    tag_found = False
+    pos = 0
+    tag_id = '# ID'
+    max_pos = 0
+    input_file = open(name, 'r')
+    for line in input_file:
+        if line:
+            if line.startswith(tag_id):
+                tag_found = True
+            elif tag_found:
+                if len(line) > 5:
+                    if line.split()[1] == 'SP(Sec/SPI)':
+                        pos = line.split()[6]
+                        pos = pos.split('-')[0]
+                        seq_id_directory[line.split()[0]] = pos
+                        if int(max_pos) < int(pos):
+                            max_pos = (pos)
+    input_file.close()
+    return max_pos
+
+def calc_max_pos_targetp2(name):
+    tag_found = False
+    pos = 0
+    tag_id = '# ID'
+    max_pos = 0
+    input_file = open(name, 'r')
+    for line in input_file:
+        if line:
+            if line.startswith(tag_id):
+                tag_found = True
+            elif tag_found:
+                if line.split()[1] == 'MT' or line.split()[1] == 'CH':
+                    text = line.split()[9]
+                    value = text.split('-')
+                    pos = value[0]
+                    if pos.isdecimal():
+                        seq_id_directory[line.split()[0]] = pos
+                        if int(max_pos) < int(pos):
+                            max_pos = (pos)
+    input_file.close()
+    return max_pos
+
+
+def calc_max_pos_out(name):
+    tag_found = False
+    pos = 0
+    tag_id = '# name'
+    max_pos = 0
+    input_file = open(name, 'r')
+    for line in input_file:
+        if line:
+            if line.startswith(tag_id):
+                tag_found = True
+            elif tag_found and line.split()[9] == 'Y':
+                pos = line.split()[2]
+                seq_id_directory[line.split()[0]] = pos
+                if int(max_pos) < int(pos):
+                    max_pos = (pos)
+    input_file.close()
+    return max_pos
+
+
+def process_files(name, max_pos):
+    output_file = open(name + '_aligned.res', 'w+')
+    name = name.split('.')
+    name = name[0] + '.' + name[1] + '.faa.signalp.mature.fasta'
+    id_found = False
+
+    input_file = open( name, 'r')
+    for key, value in seq_id_directory.items():
+        for line in input_file:
+            if line:
+                if id_found:
+                    diff = int(max_pos) - int(value)
+                    if int(value) < int(max_pos):
+                        padding = repstr(diff)
+
+                        new_line = padding + line[:200].rstrip()
+                    elif int(value) > int(max_pos):
+                        padding = repstr(diff)
+                        new_line = line[:200].rstrip() + padding
+                    elif int(value) == int(max_pos):
+                        new_line = line[:200].rstrip()
+                    output_file.write(new_line + '\n')
+                    padding = ''
+                    id_found = False
+                    new_line = ''
+                    break
+                else:
+                    if line.startswith('>' + key):
+                        id_found = True
+        input_file.seek(0)
+    input_file.close()
+    output_file.close()
+    return
+
+max_file_output = open('max_file_list.txt', 'w+')
+'''
+file_names = glob.glob('*.signalp.mature.fasta.targetp.out')
+for name in file_names:
+    print('Processing file : ' + name + '\n')
+    max_pos = calc_max_pos_signalp(name)
+    max_file_output.write(name + ' ' + str(max_pos) + '\n')
+    process_files(name, max_pos)
+    seq_id_directory.clear()
+'''
+file_names = glob.glob('*.targetp2')
+for name in file_names:
+    print('Processing file : ' + name + '\n')
+    max_pos = calc_max_pos_targetp2(name)
+    if int(max_pos) > 0:
+        max_file_output.write(name + ' ' + str(max_pos) + '\n')
+    else:
+        max_file_output.write(name + ' No SP Found in file\n')
+
+    process_files(name, max_pos)
+
+max_file_output.close()
